@@ -1,0 +1,12 @@
+# 虚拟环境（几百 MB，别人自己装就行）
+.venv/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 中间数据（可重新生成）
+*.npz
+
+# macOS 目录索引
+.DS_Store
