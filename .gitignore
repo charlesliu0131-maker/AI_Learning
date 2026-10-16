@@ -8,5 +8,18 @@ __pycache__/
 # 中间数据（可重新生成）
 *.npz
 
+# 训练产物：权重体积大（本项目 13.6 MB），重跑一次 train.py 就能生成
+# 注意：out/loss_curve.png 要留在仓库里 —— README 要用它显示曲线
+*.pt
+
+# 语料流水线的中间量（共约 11 MB，联网重跑两个脚本就能重建）——
+#   tools/download_tangshi.py  → shards/ + tangshi_all.json
+#   d22_zh_corpus.py           → *_ids.txt
+# 保留 corpus.txt / vocab.json / *.bin：陌生人克隆下来不用联网就能直接训练
+W4/P1/data/shards/
+W4/P1/data/tangshi_all.json
+W4/P1/data/tangshi_all.txt
+W4/P1/data/*_ids.txt
+
 # macOS 目录索引
 .DS_Store

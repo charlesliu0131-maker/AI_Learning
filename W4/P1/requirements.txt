@@ -1,0 +1,9 @@
+# P1 依赖 —— 钉死版本，保证可复现
+#
+# 实测环境：Python 3.13.9 / macOS (Apple Silicon, MPS) / 2026-10-16 跑通
+# 说明：本项目是手写模型 + 字符级 tokenizer，没有 transformers / tiktoken / datasets / wandb
+#       matplotlib 只被 train.py 用来画 loss 曲线（matplotlib.use('Agg')，无窗口也能存图）
+
+torch==2.14.0
+numpy==2.5.2
+matplotlib==3.11.1

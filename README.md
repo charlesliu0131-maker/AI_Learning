@@ -2,7 +2,7 @@
 
 从零手写迷你 GPT —— 一个 6 个月转型计划（**Phase 1: W1–W4**）的代码仓库。
 
-每天的脚本都**亲手写完、终端跑通、逐条批改**。这里记录 **W1–W2** 的成果：从"数次数"的 bigram，一路搭出一个能生成英文名字的小型语言模型。
+每天的脚本都**亲手写完、终端跑通、逐条批改**。这里记录 **W1–W4** 的成果：从"数次数"的 bigram，到能生成英文名字的 MLP，再到**自己手写的 Transformer**，最后是一个能续写古体诗的**中文迷你 GPT**。
 
 ---
 
@@ -12,8 +12,8 @@
 |---|---|---|
 | **W1** | 数学恢复（3B1B）+ PyTorch 查漏 | ✅ 完成（`d01`–`d07`） |
 | **W2** | 反向传播 / 优化器 + makemore（计数模型 → MLP） | ✅ 完成（`d08`–`d13`） |
-| W3 | Self-attention 收尾 + 手写 Transformer | ⬜ 进行中 |
-| W4 | 项目 P1：中文迷你 GPT | ⬜ 未开始 |
+| **W3** | Self-attention → 手写 Transformer（QKV → 缩放点积 → LN+残差 → 因果掩码+位置编码 → FFN+Block → mini GPT） | ✅ 完成（`d15`–`d20` + 周回顾） |
+| **W4** | 项目 P1：中文迷你 GPT（全唐诗 · 1.14M 参数 · 2,000 步） | 🚧 进行中（报告见 [`W4/P1/README.md`](W4/P1/README.md)） |
 
 ---
 
@@ -40,6 +40,8 @@
 ```
 W1/    数学恢复与 PyTorch 基础
 W2/    Bigram → MLP（makemore 主线）
+W3/    Self-attention → 手写 Transformer
+W4/    项目 P1：中文迷你 GPT（P1/ 为完整 7 文件项目）
 ```
 
 ### W1 · 数学恢复 + PyTorch 查漏
@@ -66,6 +68,21 @@ W2/    Bigram → MLP（makemore 主线）
 | `d13_optim_Adam.py` | 优化器实验：SGD vs Adam × 学习率三档（0.001 / 0.01 / 0.1） |
 | `names.txt` | 数据集：32033 个英文名字（按出现频率从高到低排序） |
 
+### W3 · Self-attention → 手写 Transformer
+
+| 脚本 | 做什么 |
+|---|---|
+| `d15_self_attention.py` | Self-attention 的 Q / K / V：用定义式断言验证 `S[i,j] == Q[i]·K[j]` |
+| `d16_scaled_dot_product.py` | 缩放点积注意力 + 封装成 `nn.Module`（为什么除以 `√d_k`） |
+| `d17_layernorm_residual.py` | LayerNorm + 残差：γ、β 的作用，Pre-LN 放在哪 |
+| `d18_causal_mask_pe.py` | 因果掩码（不许看未来）+ 可学习位置编码 |
+| `d19_ffn_block.py` | FFN + 完整 GPTBlock（Pre-LN + 残差） |
+| `d20_mini_gpt.py` | mini GPT 四段结构 + 权重共享（参数量 2,040） |
+
+### W4 · 项目 P1：中文迷你 GPT
+
+7 文件完整项目在 [`W4/P1/`](W4/P1/) —— **训练报告见 [`W4/P1/README.md`](W4/P1/README.md)**（loss 曲线、生成样例、复现步骤与已知局限）。
+
 ---
 
 ## 怎么运行
@@ -89,6 +106,8 @@ W1 的脚本不依赖数据文件，直接运行即可：
 cd W1
 python d06_train_loop.py
 ```
+
+项目 P1（W4）有独立的依赖与数据准备流程，直接照 [`W4/P1/README.md`](W4/P1/README.md) 的「快速开始」四步跑。
 
 ---
 
@@ -117,4 +136,4 @@ matplotlib
 ## 说明
 
 - 本仓库只包含**代码**；配套的概念笔记、回顾题库等学习资料暂存在本地。
-- W3（Self-attention → 手写 Transformer）与 W4（中文迷你 GPT）完成后会继续补充。
+- **W3**（Self-attention → 手写 Transformer）与 **W4 · P1**（中文迷你 GPT）的代码已补入；P1 的训练报告见 [`W4/P1/README.md`](W4/P1/README.md)。
