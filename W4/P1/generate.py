@@ -20,13 +20,14 @@ from pathlib import Path
 
 def load_model(ckpt_path):
     '''
-    TODO(4a) 从 checkpoint 重建模型。
+    从 checkpoint 重建模型。
 
-    要点：
-      · `ckpt = torch.load(ckpt_path, map_location='cpu')`
-      · 用 `ckpt['config']` 里的四个数重建 MiniGPT（不要用当前 CFG —— 可能已被改过）
+    做法：
+      · `torch.load(ckpt_path, weights_only=False)` —— 我们存了 Path 与 config，
+        默认的 weights_only=True 会读不回来
+      · 用 `ckpt['config']` 里的四个数重建 MiniGPT —— 不要用当前 CFG（它可能已被改过）
       · `model.load_state_dict(ckpt['model'])`，然后 `model.eval()`
-    返回 (model, ckpt)。建议顺手打印 ckpt 里存了哪些 key 和哪个 step。
+    返回 (model, ckpt)。
     '''
     ckpt = torch.load(ckpt_path, weights_only=False)
     model = MiniGPT(ckpt['config']['vocab_size'], ckpt['config']['n_embd'], ckpt['config']['block_size'], ckpt['config']['n_layer'], tie_weights=True)
@@ -47,28 +48,25 @@ def generate(model, idx, max_new_tokens, block_size, temperature=1.0, top_k=None
         （位置编码表只有 block_size 行，超了会 IndexError）
       · 只取最后一个位置：`model(idx_cond)[:, -1, :]`
 
-    TODO(D26-1) temperature：在 softmax 之前，把 logits 除以 temperature
-                （T → 0 趋近 argmax；T = 1 就是模型原本的分布；T > 1 更平、更放飞）
-
-    TODO(D26-2) top_k：只保留最大的 k 个 logit，其余填 -inf（top_k 为 None 时整段跳过）
-                提示：用 `torch.topk(logits, k).values[:, [-1]]` 取出「第 k 大」当门槛，
-                      再 `logits < 门槛 ⇒ -inf`。
-                      别用「第 k 名的下标」去比较 —— 概率并列时会多留几个，k 就不准了。
-
-    TODO(D26-3) generator：`torch.multinomial(prob, num_samples=1, generator=generator)`
-                —— 不传就吃全局随机流、生成不再可复现（D12 / D23 的坑）
+    三个旋钮（都在 softmax 之前生效）：
+      · temperature：`logits / T` —— T → 0 趋近 argmax；T = 1 是模型原本的分布；
+        T > 1 更平、更放飞
+      · top_k：只留最大的 k 个，其余填 -inf（top_k 为 None 时跳过）
+        门槛要用「值」：`torch.topk(logits, k).values[:, [-1]]` 取第 k 大，再 `logits < 门槛 ⇒ -inf`
+        —— 别按「第 k 名的下标」比较：并列时会多留几个，k 就不准了
+      · generator：`torch.multinomial(prob, num_samples=1, generator=generator)`
+        —— 不传就吃全局随机流，生成不再可复现（D12 / D23 的坑）
     '''
     for _ in range(max_new_tokens):
         idx_cond = idx[:, -block_size:]
         logits = model(idx_cond)[:, -1, :]          # 只要最后一个位置, [B, vocab_size]
-        # ↓ TODO(D26-1) 在这里除以 temperature；TODO(D26-2) 在这里做 top-k 截断
         logits = logits / temperature
         if top_k is not None:
             logits_top, _ = torch.topk(logits, k=top_k)
-            logits_min, _ = logits_top.min(dim=-1, keepdim=True)
+            thr, _ = logits_top.min(dim=-1, keepdim=True)   # 第 k 大的「值」当门槛
             # 原地改写。安全的前提是上一行已把 logits 换成了「新张量」；
             # 若直接在 model(...)[:, -1, :] 那个「视图」上原地改，会把原输出也改掉
-            logits[logits < logits_min] = float('-inf')
+            logits[logits < thr] = float('-inf')
         prob = torch.softmax(logits, dim=-1)
         idx_next = torch.multinomial(prob, num_samples=1, generator=generator)
         idx = torch.cat([idx, idx_next], dim=1)

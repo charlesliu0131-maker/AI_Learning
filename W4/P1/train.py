@@ -8,7 +8,7 @@ D23 · 训练入口
 把「能启动」拆成可检查的四条（D23 知识点 6），今天先把这四条做完、逐条 print：
 
     ① import 不报错     ② 数据能被读到     ③ 模型能建出来     ④ 前向一步不炸
-  ⇒ 这四条 = TODO(3a) ~ TODO(3d)。先跑通它们，再往 TODO(3e) 加训练循环。
+  ⇒ ①~④ 就是这四条；D24 起 ④ 升级成「形状 + loss 值」两道关。
 
 怎么运行（两种都行，因为 import 用的是「同目录裸 import」）：
     cd Code        && .venv/bin/python W4/P1/train.py
@@ -32,7 +32,7 @@ from model import MiniGPT
 
 def estimate_loss(model, block_size, batch_size, device, eval_iters, generator):
     '''
-    TODO(3f) 在 train / val 上各取 eval_iters 个 batch，求平均 loss。
+    在 train / val 上各取 eval_iters 个 batch，求平均 loss。
 
     要点：必须 `model.eval()` + `with torch.no_grad():`，算完再 `model.train()` 切回来。
           忘掉 eval() 会让 dropout / 统计量行为不一致，loss 看起来"忽高忽低"。
@@ -40,21 +40,15 @@ def estimate_loss(model, block_size, batch_size, device, eval_iters, generator):
     '''
     model.eval()
     with torch.no_grad():
-        train_losses = []
-        val_losses = []
+        losses = {'train': [], 'val': []}
         for _ in range(eval_iters):
-            for split in ['train', 'val']:
+            for split in ('train', 'val'):
                 x, y = get_batch(split, batch_size, block_size, device=device, generator=generator)
                 logits = model(x)
                 loss = nn.CrossEntropyLoss()(logits.view(-1, logits.size(-1)), y.view(-1))
-                if split == 'train':
-                    train_losses.append(loss.item())
-                elif split == 'val':
-                    val_losses.append(loss.item())
-        train_loss = sum(train_losses) / len(train_losses)
-        val_loss = sum(val_losses) / len(val_losses)
+                losses[split].append(loss.item())
         model.train()
-        return {'train': train_loss, 'val': val_loss}
+        return {k: sum(v) / len(v) for k, v in losses.items()}
 
 
 def main():
@@ -75,14 +69,19 @@ def main():
 
 
     # ---------------- ③ 模型 ----------------
-    # TODO(3c) 用 CFG 建 MiniGPT，打印参数量与「FFN 占比」核对手算参照
-    #          提示：参数量应为 V×C + T×C + N×block + 2C（head 共享 ⇒ 不单独计）
     model = MiniGPT(CFG.vocab_size, CFG.n_embd, CFG.block_size, CFG.n_layer, tie_weights=True).to(device)
     p_num = sum(p.numel() for p in model.parameters())
     block_num = sum(p.numel() for block in model.blocks for p in block.parameters() if p.requires_grad)
     ffn_num = sum(p.numel() for block in model.blocks for p in block.ffn.parameters() if p.requires_grad)
     print(f'[3/4] 参数量 = {p_num}, FFN占Block比例 = {ffn_num/block_num:.2%}')
-    print(f'[3/4] 手算参数量 = {CFG.vocab_size * CFG.n_embd + CFG.block_size * CFG.n_embd + CFG.n_layer * (2 * CFG.n_embd + CFG.n_embd ** 2 * 4 + 2 * CFG.n_embd + CFG.n_embd ** 2 * 8 + 5 * CFG.n_embd) + 2 * CFG.n_embd}')
+
+    # 手算参照（head 与 tok 共享 ⇒ 不单独计）：V×C + T×C + N×block + 2C
+    n_tok = CFG.vocab_size * CFG.n_embd
+    n_pos = CFG.block_size * CFG.n_embd
+    n_block = CFG.n_layer * (2 * CFG.n_embd + CFG.n_embd ** 2 * 4
+                             + 2 * CFG.n_embd + CFG.n_embd ** 2 * 8 + 5 * CFG.n_embd)
+    n_final = 2 * CFG.n_embd
+    print(f'[3/4] 手算参数量 = {n_tok} + {n_pos} + {n_block} + {n_final} = {n_tok + n_pos + n_block + n_final}')
 
     # ---------------- ④ 前向一步 + 初始 loss 体检（D24 的验收线） ----------------
     # D23 只查到「形状对」；D24 再加一道「loss 值对」—— 两道都过才算链路通。

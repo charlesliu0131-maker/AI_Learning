@@ -1,6 +1,6 @@
 # P1 · 中文迷你 GPT（字符级）
 
-**从零手写的字符级 GPT**：在 **7,000 首全唐诗**（564,784 字）上训练一个 **1.14M 参数**的迷你 Transformer —— 笔记本 **约 3 分钟**（含评估）跑完 2,000 步，初始 loss 精确落在理论值 `ln(V)` 上，生成的文本能对齐《全唐诗》的版式。
+**从零手写的字符级 GPT**：在 **7,000 首全唐诗**（564,784 字）上训练一个 **1.14M 参数**的迷你 Transformer —— 笔记本 **约 2 分钟**（实测 **106 s**，含评估）跑完 2,000 步，初始 loss 精确落在理论值 `ln(V)` 上，生成的文本能对齐《全唐诗》的版式。
 
 ![训练曲线](out/loss_curve.png)
 
@@ -37,7 +37,7 @@ python W4/tools/download_tangshi.py     # 拉 chinese-poetry 的 58 个唐诗分
 python W4/d22_zh_corpus.py             # 清洗 → corpus.txt / vocab.json / {train,val}_ids.txt
 python W4/P1/data.py                   # → train.bin / val.bin（幂等：已存在就跳过）
 
-# 3. 训练 —— MPS 约 3 分钟 / CPU 约 6 分钟（含每 100 步的评估）
+# 3. 训练 —— MPS 约 2 分钟（实测 106 s）/ CPU 约 4 分钟（含每 100 步的评估）
 python W4/P1/train.py
 
 # 4. 生成
